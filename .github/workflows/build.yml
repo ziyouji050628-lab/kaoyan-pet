@@ -1,11 +1,12 @@
 name: Build
 
-# Builds a Windows .exe and a macOS .app in the cloud.
-# Runs on every push, and can be triggered by hand from the Actions tab.
 on:
   push:
     branches: ["**"]
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   windows:
@@ -72,3 +73,30 @@ jobs:
           name: KaoyanPet-macOS
           path: dist/KaoyanPet-macOS.zip
           if-no-files-found: error
+
+  release:
+    name: Publish release
+    needs: [windows, macos]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Windows exe
+        uses: actions/download-artifact@v4
+        with:
+          name: KaoyanPet-Windows
+          path: dist-win
+
+      - name: Download macOS zip
+        uses: actions/download-artifact@v4
+        with:
+          name: KaoyanPet-macOS
+          path: dist-mac
+
+      - name: Create release
+        uses: ncipollo/release-action@v1
+        with:
+          tag: build-${{ github.run_number }}
+          name: Build ${{ github.run_number }}
+          body: "自动构建：Windows exe + macOS app"
+          artifacts: "dist-win/KaoyanPet.exe,dist-mac/KaoyanPet-macOS.zip"
+          allowUpdates: true
+          replacesArtifacts: true
