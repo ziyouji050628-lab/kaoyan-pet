@@ -1,0 +1,74 @@
+name: Build
+
+# Builds a Windows .exe and a macOS .app in the cloud.
+# Runs on every push, and can be triggered by hand from the Actions tab.
+on:
+  push:
+    branches: ["**"]
+  workflow_dispatch:
+
+jobs:
+  windows:
+    name: Windows exe
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Sanity check (headless)
+        run: python tests/smoke_test.py
+        env:
+          QT_QPA_PLATFORM: offscreen
+
+      - name: Build
+        run: python build.py
+
+      - name: Upload exe
+        uses: actions/upload-artifact@v4
+        with:
+          name: KaoyanPet-Windows
+          path: dist/KaoyanPet.exe
+          if-no-files-found: error
+
+  macos:
+    name: macOS app
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Sanity check (headless)
+        run: python tests/smoke_test.py
+        env:
+          QT_QPA_PLATFORM: offscreen
+
+      - name: Build
+        run: python build.py
+
+      - name: Zip app
+        run: |
+          cd dist
+          ditto -c -k --keepParent KaoyanPet.app KaoyanPet-macOS.zip
+
+      - name: Upload app
+        uses: actions/upload-artifact@v4
+        with:
+          name: KaoyanPet-macOS
+          path: dist/KaoyanPet-macOS.zip
+          if-no-files-found: error
